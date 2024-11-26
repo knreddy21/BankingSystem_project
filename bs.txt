@@ -1,0 +1,82 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define FILENAME "accounts.dat"
+
+typedef struct { int account_number; char name[50]; float balance; } Account;
+
+void createAccount(), deposit(), withdraw(), balanceInquiry(), displayMenu();
+void saveAccount(Account account);
+int loadAccount(int account_number, Account *account);
+
+int main() {
+    int choice;
+    while (1) {
+        displayMenu();
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+        switch (choice) {
+            case 1: createAccount(); break;
+            case 2: deposit(); break;
+            case 3: withdraw(); break;
+            case 4: balanceInquiry(); break;
+            case 5: printf("Exiting...\n"); exit(0);
+            default: printf("Invalid choice! Please try again.\n");
+        }
+        printf("\n");
+    }
+    return 0;
+}
+
+void displayMenu() {
+    printf("======== Banking System ========\n1. Create Account\n2. Deposit\n3. Withdraw\n4. Balance Inquiry\n5. Exit\n===============================\n");
+}
+
+void createAccount() {
+    Account account; FILE *file = fopen(FILENAME, "ab");
+    if (!file) { printf("Error opening file!\n"); return; }
+    printf("Enter account number: "); scanf("%d", &account.account_number);
+    printf("Enter name: "); scanf(" %[^\n]", account.name); account.balance = 0.0;
+    fwrite(&account, sizeof(Account), 1, file); fclose(file);
+    printf("Account created successfully!\n");
+}
+
+void deposit() {
+    int account_number; float amount; Account account;
+    printf("Enter account number: "); scanf("%d", &account_number);
+    if (!loadAccount(account_number, &account)) { printf("Account not found!\n"); return; }
+    printf("Enter amount to deposit: "); scanf("%f", &amount); account.balance += amount; saveAccount(account);
+    printf("Deposit successful! New balance: %.2f\n", account.balance);
+}
+
+void withdraw() {
+    int account_number; float amount; Account account;
+    printf("Enter account number: "); scanf("%d", &account_number);
+    if (!loadAccount(account_number, &account)) { printf("Account not found!\n"); return; }
+    printf("Enter amount to withdraw: "); scanf("%f", &amount);
+    if (amount > account.balance) printf("Insufficient balance!\n");
+    else { account.balance -= amount; saveAccount(account); printf("Withdrawal successful! New balance: %.2f\n", account.balance); }
+}
+
+void balanceInquiry() {
+    int account_number; Account account;
+    printf("Enter account number: "); scanf("%d", &account_number);
+    if (!loadAccount(account_number, &account)) { printf("Account not found!\n"); return; }
+    printf("Account Number: %d\nAccount Holder: %s\nBalance: %.2f\n", account.account_number, account.name, account.balance);
+}
+
+int loadAccount(int account_number, Account *account) {
+    FILE *file = fopen(FILENAME, "rb");
+    if (!file) return 0;
+    while (fread(account, sizeof(Account), 1, file)) if (account->account_number == account_number) { fclose(file); return 1; }
+    fclose(file); return 0;
+}
+
+void saveAccount(Account account) {
+    FILE *file = fopen(FILENAME, "rb+"); Account temp;
+    if (!file) { printf("Error opening file!\n"); return; }
+    while (fread(&temp, sizeof(Account), 1, file))
+        if (temp.account_number == account.account_number) { fseek(file, -sizeof(Account), SEEK_CUR); fwrite(&account, sizeof(Account), 1, file); fclose(file); return; }
+    fclose(file);
+}
